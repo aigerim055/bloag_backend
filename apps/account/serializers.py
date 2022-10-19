@@ -28,10 +28,10 @@ class UserRegistartionSerializer(serializers.ModelSerializer):
         password_confirm = attrs.pop('password_confirm')
         if password != password_confirm:
             raise serializers.ValidationError('password do not match')
-        return 
+        return attrs
 
     def create(self, validated_data):
         user = User.objects.create_user(**validated_data)
         user.create_activation_code()
-        send_activation_code(user.email, user.activation_code)
+        send_activation_code.delay(user.email, user.activation_code)
         return user
