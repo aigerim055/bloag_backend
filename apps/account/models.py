@@ -1,6 +1,10 @@
 from locale import normalize
 from django.db import models
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
+from django.utils.crypto import get_random_string
+
+
+
 
 
 class UserManager(BaseUserManager):
@@ -51,4 +55,14 @@ class User(AbstractBaseUser):
     def has_perm(self, obj=None):
         return self.is_staff
 
-    
+
+    def create_activation_code(self):
+            code = get_random_string(length=8)
+            if User.objects.filter(activation_code=code).exists():
+                self.create_activation_code()
+            self.activation_code = code
+            self.save()
+
+    class Meta:
+        verbose_name = 'User'
+        verbose_name_plural = 'Users'
