@@ -4,8 +4,14 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
+from rest_framework.permissions import IsAuthenticated
 
-from .serializers import UserRegistartionSerializer
+from .serializers import (
+    UserRegistartionSerializer,
+    PasswordChangeSerializer,
+    RestorepasswordSerializer,
+    SetRestoredPasswordSerializer,
+)
 
 
 User = get_user_model()
@@ -40,9 +46,45 @@ class AccountActivationView(APIView):
         )
 
 
+class PasswordChangeView(APIView):
+    permission_classes = [IsAuthenticated]
 
+    def post(self, request: Request):
+        serializer = PasswordChangeSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid(raise_exception=True):
+            serializer.set_new_password()
+            return Response(
+                'password changed seccesfully!',
+                status=status.HTTP_200_OK
+            )
 
+class RestorePassworsView(APIView):
+    def post(self, request):
+        serializer = RestorepasswordSerializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            serializer.send_code()
+            return Response(
+                'code was sent to your email',
+                 status=status.HTTP_200_OK
+            )
 
+class SetRestoredPasswordView(APIView):
+    def post(self, request: Request):
+        serializer = SetRestoredPasswordSerializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            serializer.set_new_password()
+            return Response(
+                'password restored successfuly',
+                status=status.HTTP_200_OK
+            )
 
+class DeleteAccountView(APIView):
+    permission_classes = [IsAuthenticated]
 
-# TODO: смена пароля, удаление аккаунта, восстановление пароля
+    def delete(self, request: Request):
+        username = request.user.username
+        User.objects.get(username=username).delete()
+        return Response(
+            'account deleted successfuly',
+            status=status.HTTP_204_NO_CONTENT
+        )
