@@ -21,12 +21,16 @@ from .models import (
     Post,
     Tag,
     Comment,
+    Rating,
 )
 from .serializers import (
     PostListSerializer,
     PostSerializer,
     PostCreateSerializer,
     CommentSerializer,
+    RatingSerializer,
+    TagSerializer,
+    LikeSerializer,
 )
 
 from .permissions import IsOwner
@@ -56,7 +60,7 @@ class PostViewSet(ModelViewSet):
             self.permission_classes = [AllowAny]
         if self.action == 'comment' and self.request.method == 'DELETE':
             self.permission_classes == [IsOwner]
-        if self.action in ['create', 'comment']:
+        if self.action in ['create', 'comment', 'set_rating', 'like']:
             self.permission_classes = [IsAuthenticated]
         if self.action in ['destroy', 'update', 'partial_update']:
             self.permission_classes = [IsOwner]
@@ -66,37 +70,79 @@ class PostViewSet(ModelViewSet):
     def comment(self, request,pk=None):
         post = self.get_object()
         serializer = CommentSerializer(data=request.data)
-        comment = Comment.objects.filter(
+        if serializer.is_valid(raise_exception=True):
+            serializer.save(user=request.user, post=post)
+            return Response(
+                serializer.data,
+                status=status.HTTP_201_CREATED
+               )
+          
+
+    @action(methods=['POST', 'PATCH'], detail=True, url_path='set-rating')
+    def set_rating(self, request, pk=None):
+        data = request.data.copy()
+        data['post'] = pk # TODO
+        serializer = RatingSerializer(data=data, context={'request': request})
+        rate = Rating.objects.filter(
             user=request.user,
             post=pk
         ).first()
         if serializer.is_valid(raise_exception=True):
+            if rate and request.method == 'POST':
+                return Response(
+                    {'detail': 'rating object exists. use PATCH method'}
+                )
+            elif rate and request.method == 'PATCH':
+                serializer.update(rate, serializer.validated_data)
+                return  Response('updated')
+            elif request.method == 'POST':
+                serializer.create(serializer.validated_data)
+                return Response(serializer.data)
+            return Response('ZAGLUSHKA') # TODO: fix
+            
+    @action(detail=True, methods=['POST', 'DELETE'])
+    def like(self, request, pk=None):
+        post = self.get_object()
+        serializer = LikeSerializer(
+            data=request.data, 
+            context={
+                'request':request,
+                'post':post
+            })
+        if serializer.is_valid(raise_exception=True):
             if request.method == 'POST':
-                serializer.save(user=request.user, post=post)
-                return Response(
-                    serializer.data,
-                    status=status.HTTP_201_CREATED
-                )
-            elif comment is not None and request.method == 'DELETE':
-                comment.delete()
-                return Response(
-                    'deleted!',
-                    status=status.HTTP_204_NO_CONTENT
-                )
+                serializer.save(user=request.user)
+                return Response('liked!')
+            if request.method == 'DELETE':
+                serializer.unlike()
+                return Response('unliked!')
+
 
 
 class CommentCreateDeleteView(
-    mixins.CreateModelMixin,
     mixins.DestroyModelMixin,
     GenericViewSet
     ):
     queryset= Comment.objects.all()
     serializer_class = CommentSerializer
+    permission_classes = [IsOwner]
+   
 
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+# class TagViewSet(
+#     mixins.ListModelMixin,
+#     mixins.CreateModelMixin,
+#     mixins.DestroyModelMixin,
+#     mixins.RetrieveModelMixin
+#     ):
+#     queryset = Tag.objects.all()
+#     serializer_class = TagSerializer
 
-
+#     def get_permissions(self):
+#         if self.action == 'create':
+#             self.permission_classes = [IsAuthenticated]
+#         if self.action == 'destroy':
+#             self.permission_classes = [IsAdminUser]
+#         return super().get_permissions()
 
 
 """  
@@ -109,8 +155,7 @@ partial_update() - PATCH /post/1/
 update() - PUT /post/1/
 """
 
-# TODO: поправить удаление комментариев
-# TODO: создание лайков
-# TODO: отображение лайков в постах
-# TODO: создать модельку рейтингов
-# TODO: создание рейтинга и отображение в постах
+
+# TODO: фильтрация, поиск, пагинация
+# TODO: кастомизация админ-панели
+# TODO: fix rating

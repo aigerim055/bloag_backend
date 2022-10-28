@@ -47,6 +47,16 @@ class Post(models.Model):
         ordering = ('created_at',)
 
 
+class PostImage(models.Model):
+    image = models.ImageField(upload_to='post_images/carousel')
+    post = models.ForeignKey(
+        to=Post,
+        on_delete=models.CASCADE,
+        related_name='post_images'
+    )
+
+
+
 class Tag(models.Model):
     title = models.CharField(max_length=30, unique=True)
     slug = models.SlugField(primary_key=True,blank=True, max_length=35 )
@@ -75,7 +85,7 @@ class Comment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f'comment from {self.user.username} to {self.post.title}'
+        return f'Comment from {self.user.username} to {self.post.title}'
 
 
 class Rating(models.Model):
@@ -102,8 +112,24 @@ class Rating(models.Model):
     post = models.ForeignKey(
         to=Post,
         on_delete=models.CASCADE,
-        related_name='raitings'
+        related_name='ratings'
     )
 
     def __str__(self):
         return str(self.rating)
+
+
+class Like(models.Model):
+    user = models.ForeignKey(
+        to=User,
+        on_delete=models.CASCADE,
+        related_name='likes'
+    )
+    post = models.ForeignKey(
+        to=Post,
+        on_delete=models.CASCADE,
+        related_name='likes'  
+    )
+
+    def __str__(self) -> str:
+        return f'liked by {self.user.username}'
