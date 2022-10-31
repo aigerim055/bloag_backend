@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.urls import reverse
+
 from slugify import slugify
 
 
@@ -45,6 +47,9 @@ class Post(models.Model):
 
     class Meta:
         ordering = ('created_at',)
+
+    def get_absolute_url(self):
+        return reverse("post-detail", kwargs={"pk": self.pk})
 
 
 class PostImage(models.Model):

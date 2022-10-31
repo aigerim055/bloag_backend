@@ -5,9 +5,11 @@ from rest_framework.permissions import (
     AllowAny
 )
 
-from rest_framework import mixins, status
+from rest_framework import mixins, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django_filters import rest_framework as rest_filter
+from rest_framework.generics import ListAPIView
 
 # from rest_framework.generics import ( 
 #     ListAPIView, 
@@ -22,6 +24,7 @@ from .models import (
     Tag,
     Comment,
     Rating,
+    Like,
 )
 from .serializers import (
     PostListSerializer,
@@ -31,6 +34,7 @@ from .serializers import (
     RatingSerializer,
     TagSerializer,
     LikeSerializer,
+    LikedPostsSerializer,
 )
 
 from .permissions import IsOwner
@@ -44,6 +48,15 @@ from .permissions import IsOwner
 class PostViewSet(ModelViewSet):
     queryset = Post.objects.all()
     serializer_class = PostSerializer
+    filter_backends = [
+        filters.SearchFilter, 
+        rest_filter.DjangoFilterBackend, 
+        filters.OrderingFilter
+        ]
+    search_fields = ['title', 'user__username']
+    filterset_fields = ['tag']
+    ordering_fields = ['created_at']
+
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -98,7 +111,8 @@ class PostViewSet(ModelViewSet):
             elif request.method == 'POST':
                 serializer.create(serializer.validated_data)
                 return Response(serializer.data)
-            return Response('ZAGLUSHKA') # TODO: fix
+            else:
+                return Response({'detail': 'rating object does not exist. use POST method'}) # TODO: fix
             
     @action(detail=True, methods=['POST', 'DELETE'])
     def like(self, request, pk=None):
@@ -145,6 +159,14 @@ class CommentCreateDeleteView(
 #         return super().get_permissions()
 
 
+class LikedPostsView(ListAPIView):
+    serializer_class = LikedPostsSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        return Like.objects.filter(user=user)
+
 """  
 actions
 create() - POST
@@ -156,6 +178,4 @@ update() - PUT /post/1/
 """
 
 
-# TODO: фильтрация, поиск, пагинация
 # TODO: кастомизация админ-панели
-# TODO: fix rating

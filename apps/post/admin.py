@@ -8,4 +8,18 @@ from .models import (
 )
 
 
-admin.site.register([Post, Tag, Rating, PostImage, Like])
+admin.site.register([Tag, Rating, Like])
+
+
+class TabularInlineImages(admin.TabularInline):
+    model = PostImage
+    extra = 3
+    fields = ['image']
+
+
+class PostAdmin(admin.ModelAdmin):
+    model = Post
+    inlines = [TabularInlineImages]
+
+
+admin.site.register(Post, PostAdmin)
