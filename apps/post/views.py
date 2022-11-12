@@ -39,10 +39,10 @@ from .serializers import (
 
 from .permissions import IsOwner
 
-# class PostListView(ListAPIView):
-#     # quearyset = Post.objects.filter(status='open')
-#     quareyset = Post.objects.all()
-#     serializer_class = PostListSerializer
+class PostListView(ListAPIView):
+    # quearyset = Post.objects.filter(status='open')
+    quareyset = Post.objects.all()
+    serializer_class = PostListSerializer
 
 
 class PostViewSet(ModelViewSet):
